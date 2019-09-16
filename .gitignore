@@ -1,3 +1,9 @@
 .DS_Store
+
 coverage.txt
+build
+*.out
+*.pprof
+
 *.jpg
+*.NEF
