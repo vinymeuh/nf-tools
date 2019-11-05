@@ -1,39 +1,70 @@
+// Copyright 2019 VinyMeuh. All rights reserved.
+// Use of the source code is governed by a MIT-style license that can be found in the LICENSE file.
+
 package main
 
 import (
 	"flag"
 	"fmt"
+	"io"
 	"os"
+	"path/filepath"
+	"reflect"
 
-	"github.com/vinymeuh/nifuda/pkg/exif"
+	"github.com/vinymeuh/nifuda"
 )
 
 func main() {
+	flag.Usage = func() {
+		fmt.Printf("Usage: %s EXIFFILE\n", filepath.Base(os.Args[0]))
+		flag.PrintDefaults()
+	}
+
+	// parse commande line
 	flag.Parse()
 	args := flag.Args()
 
 	if len(args) != 1 {
-		fmt.Fprintln(os.Stderr, "usage: nf-show EXIFFILE")
-		os.Exit(2)
+		flag.Usage()
+		os.Exit(1)
 	}
-	filepath := args[0]
 
-	osf, err := os.Open(filepath)
+	err := task(args[0], os.Stdout)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(2)
 	}
-	defer osf.Close()
+}
 
-	f, err := exif.Read(osf)
+func task(path string, out io.Writer) error {
+	f, err := os.Open(path)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(2)
+		return err
+	}
+	defer f.Close()
+
+	x, err := nifuda.Read(f)
+	if err != nil {
+		return err
 	}
 
-	for namespace, tags := range f.Tags() {
-		for _, tag := range tags {
-			fmt.Printf("%-6s   %-30s   %s\n", namespace, tag.Name(), tag.Value().String())
-		}
+	v := reflect.ValueOf(x.Image)
+	vt := v.Type()
+	for i := 0; i < vt.NumField(); i++ {
+		fmt.Printf("Image.%-30s   %v\n", vt.Field(i).Name, v.Field(i).Interface())
 	}
+
+	v = reflect.ValueOf(x.Photo)
+	vt = v.Type()
+	for i := 0; i < vt.NumField(); i++ {
+		fmt.Printf("Photo.%-30s   %v\n", vt.Field(i).Name, v.Field(i).Interface())
+	}
+
+	v = reflect.ValueOf(x.Gps)
+	vt = v.Type()
+	for i := 0; i < vt.NumField(); i++ {
+		fmt.Printf("GPS.%-30s     %v\n", vt.Field(i).Name, v.Field(i).Interface())
+	}
+
+	return nil
 }
