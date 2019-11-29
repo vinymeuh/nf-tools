@@ -87,7 +87,6 @@ func main() {
 }
 
 func newNameForImageFile(path string) (string, error) {
-	// retrieve Exif data
 	f, err := os.Open(path)
 	if err != nil {
 		return "", err
@@ -104,24 +103,25 @@ func newNameForImageFile(path string) (string, error) {
 		return "", err
 	}
 
-	// new path YYYY-MM-DD/YYYY-MM-DD_HHMISS_ORIGINAL_NAME.EXT
+	return newName(path, datetime), nil
+}
+
+// new path YYYY-MM-DD/YYYY-MM-DD_HHMISS_ORIGINAL_NAME.EXT
+func newName(path string, datetime time.Time) string {
 	pathDir := filepath.Dir(path)
-	pathBase := filepath.Base(path)
-	pathExt := filepath.Ext(path)
+	pathExt := filepath.Ext(path) // file extension including the dot
+	pathBase := filepath.Base(path)[0 : len(filepath.Base(path))-len(pathExt)]
 
 	newSubDir := datetime.Format("2006-01-02")
 	datePrefix := datetime.Format("2006-01-02_150405")
 
 	pathPostfix := strings.TrimPrefix(pathBase, datePrefix+"_")
 
-	var newPath string
-	if pathPostfix == pathBase {
-		newPath = fmt.Sprintf("%s/%s/%s%s", pathDir, newSubDir, datePrefix, pathExt)
-	} else {
-		newPath = fmt.Sprintf("%s/%s/%s_%s", pathDir, newSubDir, datePrefix, pathPostfix)
+	if pathPostfix == datePrefix {
+		return fmt.Sprintf("%s/%s/%s%s", pathDir, newSubDir, datePrefix, pathExt)
 	}
+	return fmt.Sprintf("%s/%s/%s_%s%s", pathDir, newSubDir, datePrefix, pathPostfix, pathExt)
 
-	return newPath, nil
 }
 
 func copySidecarFile(path string, newPath string) error {
